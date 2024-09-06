@@ -26,6 +26,7 @@ def main():
     create_tables(cur, conn)
 
     conn.close()
+    print("done")
 
 
 if __name__ == "__main__":
