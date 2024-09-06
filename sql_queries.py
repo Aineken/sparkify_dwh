@@ -5,7 +5,8 @@ import configparser
 config = configparser.ConfigParser()
 config.read('dwh.cfg')
 
-ARN= config.get('IAM_ROLE','ARN')
+ARN_ROLE= config.get('IAM_ROLE','ARN_ROLE')
+print(ARN_ROLE)
 
 # DROP TABLES
 staging_events_table_drop = "DROP TABLE IF EXISTS staging_events"
@@ -44,15 +45,15 @@ CREATE TABLE IF NOT EXISTS staging_events (
 
 staging_songs_table_create = ("""
 CREATE TABLE IF NOT EXISTS staging_songs(
-    num_songs        INT,
     artist_id        VARCHAR(256),
     artist_latitude  FLOAT,
-    artist_longitude FLOAT,
     artist_location  VARCHAR(256),
+    artist_longitude FLOAT,
     artist_name      VARCHAR(256),
+    duration         FLOAT,
+    num_songs        INT,
     song_id          VARCHAR(256),
     title            VARCHAR(256),
-    duration         FLOAT,
     year             INT
 );
 """)
@@ -61,7 +62,7 @@ CREATE TABLE IF NOT EXISTS staging_songs(
 
 songplay_table_create = ("""
 CREATE TABLE IF NOT EXISTS songplay(
-    songplay_id SERIAL PRIMARY KEY,     
+    songplay_id INT PRIMARY KEY,     
     start_time TIMESTAMP NOT NULL,      
     user_id INT NOT NULL,               
     level VARCHAR(10) NOT NULL,
@@ -126,25 +127,23 @@ drop_table_queries = [staging_events_table_drop, staging_songs_table_drop, songp
 
 # STAGING TABLES
 
-staging_events_copy = ("""   
+staging_events_copy = ("""
 COPY staging_events
 FROM 's3://udacity-dend/log_data'
-CREDENTIALS 'aws_iam_role=<YOUR_IAM_ROLE>'
-gzip delimiter ';' 
+CREDENTIALS 'aws_iam_role={}'
 compupdate off
 FORMAT AS JSON 's3://udacity-dend/log_json_path.json'
-REGION 'us-west-2'
-TIMEFORMAT AS 'epochmillisecs';
-""").format(ARN)
+REGION 'us-west-2';
+""").format(ARN_ROLE)
 
 staging_songs_copy = ("""
- COPY staging_songs 
- FROM 's3://udacity-dend/song_data' 
-CREDENTIALS 'aws_iam_role={}' 
-gzip delimiter ';' 
+COPY staging_songs 
+FROM 's3://udacity-dend/song_data' 
+CREDENTIALS 'aws_iam_role={}'  
+FORMAT AS JSON 'auto' 
 compupdate off 
 REGION 'us-west-2';
-""").format(ARN)
+""").format(ARN_ROLE)
 
 # FINAL TABLES
 
@@ -169,6 +168,7 @@ time_table_insert = ("""
 """)
 
 # QUERY LISTS
-
+create_table_queries = [staging_events_table_create, staging_songs_table_create, user_table_create, song_table_create, artist_table_create, time_table_create, songplay_table_create]
+drop_table_queries = [staging_events_table_drop, staging_songs_table_drop, songplay_table_drop, user_table_drop, song_table_drop, artist_table_drop, time_table_drop]
 copy_table_queries = [staging_events_copy, staging_songs_copy]
 insert_table_queries = [songplay_table_insert, user_table_insert, song_table_insert, artist_table_insert, time_table_insert]
