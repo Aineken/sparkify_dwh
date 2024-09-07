@@ -4,7 +4,6 @@ import configparser
 # CONFIG
 config = configparser.ConfigParser()
 config.read('dwh.cfg')
-
 ARN_ROLE= config.get('IAM_ROLE','ARN_ROLE')
 print(ARN_ROLE)
 
@@ -31,11 +30,11 @@ CREATE TABLE IF NOT EXISTS staging_events (
     location        VARCHAR(256),
     method          VARCHAR(10),
     page            VARCHAR(50),
-    registration    BIGINT,
+    registration    TIMESTAMP,
     sessionId       INTEGER,
     song            VARCHAR(256),
     status          INTEGER,
-    ts              BIGINT,     
+    ts              TIMESTAMP,     
     userAgent       VARCHAR(256),
     userId          VARCHAR(50)
 );
@@ -53,7 +52,7 @@ CREATE TABLE IF NOT EXISTS staging_songs(
     duration         FLOAT,
     num_songs        INT,
     song_id          VARCHAR(256),
-    title            VARCHAR(256),
+    title            VARCHAR,
     year             INT
 );
 """)
@@ -121,10 +120,6 @@ CREATE TABLE IF NOT EXISTS time(
 );
 """)
 
-
-create_table_queries = [staging_events_table_create, staging_songs_table_create, user_table_create, song_table_create, artist_table_create, time_table_create, songplay_table_create]
-drop_table_queries = [staging_events_table_drop, staging_songs_table_drop, songplay_table_drop, user_table_drop, song_table_drop, artist_table_drop, time_table_drop]
-
 # STAGING TABLES
 
 staging_events_copy = ("""
@@ -133,12 +128,13 @@ FROM 's3://udacity-dend/log_data'
 CREDENTIALS 'aws_iam_role={}'
 compupdate off
 FORMAT AS JSON 's3://udacity-dend/log_json_path.json'
+TIMEFORMAT 'epochmillisecs'
 REGION 'us-west-2';
 """).format(ARN_ROLE)
 
 staging_songs_copy = ("""
 COPY staging_songs 
-FROM 's3://udacity-dend/song_data' 
+FROM 's3://udacity-dend/song_data/A/B' 
 CREDENTIALS 'aws_iam_role={}'  
 FORMAT AS JSON 'auto' 
 compupdate off 
@@ -148,27 +144,77 @@ REGION 'us-west-2';
 # FINAL TABLES
 
 songplay_table_insert = ("""
-
+INSERT INTO songplay (songplay_id, start_time, user_id, level, song_id, artist_id, session_id, location, user_agent)
+SELECT 
+    ROW_NUMBER() OVER (ORDER BY se.ts) AS songplay_id,
+    se.ts AS start_time,
+    se.userId::INTEGER AS user_id,
+    se.level AS level,
+    ss.song_id AS song_id,
+    ss.artist_id AS artist_id,
+    se.sessionId AS session_id,
+    se.location AS location,
+    se.userAgent AS user_agent
+FROM staging_events se
+JOIN staging_songs ss
+ON se.song = ss.title
+WHERE se.page = 'NextSong';
 """)
 
 user_table_insert = ("""
-
+INSERT INTO users (user_id, first_name, last_name, gender, level)
+SELECT 
+    se.userId::INTEGER AS user_id,
+    se.firstName as first_name,
+    se.lastName as last_name,
+    se.gender as gender,
+    se.level as level  
+FROM staging_events se
+JOIN staging_songs ss
+ON se.song = ss.title
+WHERE se.page = 'NextSong';
 """)
 
 song_table_insert = ("""
-
+INSERT INTO songs (song_id, title, artist_id, year, duration)
+SELECT 
+    ss.song_id as song_id,
+    ss.title as title,
+    ss.artist_id as astist_id,
+    ss.year as year, 
+    ss.duration as duration
+FROM staging_songs ss
 """)
 
 artist_table_insert = ("""
-
+INSERT INTO artists (artist_id, name, location, latitude, longitude)
+SELECT
+    ss.artist_id as astist_id,
+    ss.artist_name as name,
+    ss.artist_location as location,
+    ss.artist_latitude as latitude,
+    ss.artist_longitude as longitude
+FROM staging_songs ss
 """)
 
 time_table_insert = ("""
-
+INSERT INTO time (start_time, hour, day, week, month, year, weekday)
+SELECT 
+    se.ts AS start_time,
+    EXTRACT(hour FROM se.ts) AS hour,
+    EXTRACT(day FROM se.ts) AS day,
+    EXTRACT(week FROM se.ts) AS week,
+    EXTRACT(month FROM se.ts) AS month,
+    EXTRACT(year FROM se.ts) AS year,
+    EXTRACT(dow FROM se.ts) AS weekday
+FROM staging_events se;
 """)
 
 # QUERY LISTS
 create_table_queries = [staging_events_table_create, staging_songs_table_create, user_table_create, song_table_create, artist_table_create, time_table_create, songplay_table_create]
 drop_table_queries = [staging_events_table_drop, staging_songs_table_drop, songplay_table_drop, user_table_drop, song_table_drop, artist_table_drop, time_table_drop]
+
+create_table_queries = [staging_events_table_create, staging_songs_table_create, user_table_create, song_table_create, artist_table_create, time_table_create, songplay_table_create]
+drop_table_queries = [songplay_table_drop, user_table_drop, song_table_drop, artist_table_drop, time_table_drop, staging_events_table_drop, staging_songs_table_drop]
 copy_table_queries = [staging_events_copy, staging_songs_copy]
 insert_table_queries = [songplay_table_insert, user_table_insert, song_table_insert, artist_table_insert, time_table_insert]

@@ -102,7 +102,7 @@ def check_cluster():
 
     myClusterProps = redshift.describe_clusters(ClusterIdentifier=DWH_CLUSTER_IDENTIFIER)['Clusters'][0]
     prettyRedshiftProps(myClusterProps)
-
+    print(prettyRedshiftProps(myClusterProps))
     DWH_ENDPOINT = myClusterProps['Endpoint']['Address']
     DWH_ROLE_ARN = myClusterProps['IamRoles'][0]['IamRoleArn']
     print("DWH_ENDPOINT :: ", DWH_ENDPOINT)
@@ -127,8 +127,8 @@ def delete_cluster():
 def main():
     # create_role()
     # create_cluster()
-    # check_cluster()
-    delete_cluster()
+    check_cluster()
+    # delete_cluster()
 
 
 
