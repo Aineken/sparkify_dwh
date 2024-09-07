@@ -5,6 +5,9 @@ import configparser
 config = configparser.ConfigParser()
 config.read('dwh.cfg')
 ARN_ROLE= config.get('IAM_ROLE','ARN_ROLE')
+LOG_DATA=  config.get('S3','LOG_DATA') #'s3://udacity-dend/log_data'
+LOG_JSONPATH= config.get('S3','LOG_JSONPATH') #'s3://udacity-dend/log_json_path.json'
+SONG_DATA= config.get('S3','SONG_DATA') #'s3://udacity-dend/song_data'
 print(ARN_ROLE)
 
 # DROP TABLES
@@ -124,22 +127,22 @@ CREATE TABLE IF NOT EXISTS time(
 
 staging_events_copy = ("""
 COPY staging_events
-FROM 's3://udacity-dend/log_data'
+FROM {}
 CREDENTIALS 'aws_iam_role={}'
 compupdate off
-FORMAT AS JSON 's3://udacity-dend/log_json_path.json'
+FORMAT AS JSON {}
 TIMEFORMAT 'epochmillisecs'
 REGION 'us-west-2';
-""").format(ARN_ROLE)
+""").format(LOG_DATA, ARN_ROLE, LOG_JSONPATH)
 
 staging_songs_copy = ("""
 COPY staging_songs 
-FROM 's3://udacity-dend/song_data/A/B' 
+FROM {} 
 CREDENTIALS 'aws_iam_role={}'  
 FORMAT AS JSON 'auto' 
 compupdate off 
 REGION 'us-west-2';
-""").format(ARN_ROLE)
+""").format(SONG_DATA, ARN_ROLE)
 
 # FINAL TABLES
 
@@ -218,3 +221,13 @@ create_table_queries = [staging_events_table_create, staging_songs_table_create,
 drop_table_queries = [songplay_table_drop, user_table_drop, song_table_drop, artist_table_drop, time_table_drop, staging_events_table_drop, staging_songs_table_drop]
 copy_table_queries = [staging_events_copy, staging_songs_copy]
 insert_table_queries = [songplay_table_insert, user_table_insert, song_table_insert, artist_table_insert, time_table_insert]
+
+
+# Add the following SQL queries to count rows
+count_staging_events = "SELECT COUNT(*) FROM staging_events;"
+count_staging_songs = "SELECT COUNT(*) FROM staging_songs;"
+count_songplays = "SELECT COUNT(*) FROM songplay;"
+count_users = "SELECT COUNT(*) FROM users;"
+count_songs = "SELECT COUNT(*) FROM songs;"
+count_artists = "SELECT COUNT(*) FROM artists;"
+count_time = "SELECT COUNT(*) FROM time;"

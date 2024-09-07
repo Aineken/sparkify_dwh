@@ -12,13 +12,11 @@ SECRET = config.get('AWS', 'secret')
 DWH_CLUSTER_TYPE       = config.get("DWH","DWH_CLUSTER_TYPE")
 DWH_NUM_NODES          = config.get("DWH","DWH_NUM_NODES")
 DWH_NODE_TYPE          = config.get("DWH","DWH_NODE_TYPE")
-
 DWH_CLUSTER_IDENTIFIER = config.get("DWH","DWH_CLUSTER_IDENTIFIER")
 DWH_DB                 = config.get("CLUSTER","DB_NAME")
 DWH_DB_USER            = config.get("CLUSTER","DB_USER")
 DWH_DB_PASSWORD        = config.get("CLUSTER","DB_PASSWORD")
 DWH_PORT               = config.get("CLUSTER","DB_PORT")
-
 DWH_IAM_ROLE_NAME      = config.get("DWH", "DWH_IAM_ROLE_NAME")
 
 roleArn                = config.get('IAM_ROLE', 'ARN_ROLE')
@@ -69,9 +67,9 @@ def create_role():
                            )['ResponseMetadata']['HTTPStatusCode']
 
     print("1.3 Get the IAM role ARN")
-    # roleArn = iam.get_role(RoleName=DWH_IAM_ROLE_NAME)['Role']['Arn']
+    roleArn = iam.get_role(RoleName=DWH_IAM_ROLE_NAME)['Role']['Arn']
 
-    # print(roleArn)
+    print(roleArn)
 def create_cluster():
     try:
         response = redshift.create_cluster(
@@ -127,7 +125,7 @@ def delete_cluster():
 def main():
     # create_role()
     # create_cluster()
-    check_cluster()
+    # check_cluster()
     # delete_cluster()
 
 
